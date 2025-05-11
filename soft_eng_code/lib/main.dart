@@ -1,6 +1,7 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
-import 'package:soft_eng_code/bmi_tracker.dart';  // ← your real BMI tracker widget
+import 'package:soft_eng_code/bmi_tracker.dart';
+import 'package:soft_eng_code/recipe_list_screen.dart';// ← your real BMI tracker widget
 
 void main() => runApp(const FitnessApp());
 
@@ -25,7 +26,7 @@ class FitnessApp extends StatelessWidget {
         '/bmi':      (c) => const InputPage(),
         '/weight':   (c) => const PlaceholderScreen(title: 'Weight Tracker'),
         '/exercises':(c) => const PlaceholderScreen(title: 'Exercises'),
-        '/recipes':  (c) => const PlaceholderScreen(title: 'Food Recipes'),
+        '/recipes':  (c) => const RecipeListScreen(),
         '/health':   (c) => const PlaceholderScreen(title: 'Health Info'),
       },
     );
