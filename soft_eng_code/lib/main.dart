@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:soft_eng_code/bmi_tracker.dart';
 import 'package:soft_eng_code/recipe_list_screen.dart';// ← your real BMI tracker widget
+import 'package:soft_eng_code/weight_tracker.dart'; // <-- Import WeightTracker
 
 void main() => runApp(const FitnessApp());
 
@@ -24,7 +25,7 @@ class FitnessApp extends StatelessWidget {
         '/':         (c) => const WelcomePage(),
         '/home':     (c) => const HomePage(),
         '/bmi':      (c) => const InputPage(),
-        '/weight':   (c) => const PlaceholderScreen(title: 'Weight Tracker'),
+        '/weight':   (c) => const WeightTracker(),  // <-- Add the route
         '/exercises':(c) => const PlaceholderScreen(title: 'Exercises'),
         '/recipes':  (c) => const RecipeListScreen(),
         '/health':   (c) => const PlaceholderScreen(title: 'Health Info'),
@@ -129,30 +130,33 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 16),
 
               // ─── Graph Placeholder ─────────────────────────────
-              Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.white, Colors.deepPurple.withOpacity(0.1)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
-                  ],
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.show_chart, size: 64, color: Colors.deepPurpleAccent),
-                      SizedBox(height: 8),
-                      Text(
-                        'View Your Progress',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                      ),
+              GestureDetector(
+                onTap: () => Navigator.pushNamed(context, '/weight'),
+                child: Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.white, Colors.deepPurple.withOpacity(0.1)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
                     ],
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.show_chart, size: 64, color: Colors.deepPurpleAccent),
+                        SizedBox(height: 8),
+                        Text(
+                          'View Your Progress',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -164,6 +168,7 @@ class HomePage extends StatelessWidget {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 12),
+
 
               // ─── Feature Cards ────────────────────────────────
               Expanded(
