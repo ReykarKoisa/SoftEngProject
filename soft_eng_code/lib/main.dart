@@ -1,9 +1,14 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:soft_eng_code/bmi_tracker.dart';
+<<<<<<< HEAD
 import 'package:soft_eng_code/recipe_list_screen.dart';
 import 'package:soft_eng_code/weight_tracker.dart';
 import 'package:soft_eng_code/exercise_list.dart'; // ← Add this line
+=======
+import 'package:soft_eng_code/recipe_list_screen.dart';// ← your real BMI tracker widget
+import 'package:soft_eng_code/weight_tracker.dart'; // <-- Import WeightTracker
+>>>>>>> 25686b1aee779fb4a2a36597f36bffe292ef34b5
 
 void main() => runApp(const FitnessApp());
 
@@ -23,6 +28,7 @@ class FitnessApp extends StatelessWidget {
       ),
       initialRoute: '/',
       routes: {
+<<<<<<< HEAD
         '/': (c) => const WelcomePage(),
         '/home': (c) => const HomePage(),
         '/bmi': (c) => const InputPage(),
@@ -30,6 +36,15 @@ class FitnessApp extends StatelessWidget {
         '/exercises': (c) => ExerciseListPage(), // ← Replace this line
         '/recipes': (c) => const RecipeListScreen(),
         '/health': (c) => const PlaceholderScreen(title: 'Health Info'),
+=======
+        '/':         (c) => const WelcomePage(),
+        '/home':     (c) => const HomePage(),
+        '/bmi':      (c) => const InputPage(),
+        '/weight':   (c) => const WeightTracker(),  // <-- Add the route
+        '/exercises':(c) => const PlaceholderScreen(title: 'Exercises'),
+        '/recipes':  (c) => const RecipeListScreen(),
+        '/health':   (c) => const PlaceholderScreen(title: 'Health Info'),
+>>>>>>> 25686b1aee779fb4a2a36597f36bffe292ef34b5
       },
     );
   }
@@ -137,25 +152,34 @@ class HomePage extends StatelessWidget {
                   height: 200,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
+<<<<<<< HEAD
                       colors: [
                         Colors.white,
                         Colors.deepPurple.withOpacity(0.1)
                       ],
+=======
+                      colors: [Colors.white, Colors.deepPurple.withOpacity(0.1)],
+>>>>>>> 25686b1aee779fb4a2a36597f36bffe292ef34b5
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: const [
+<<<<<<< HEAD
                       BoxShadow(
                           color: Colors.black12,
                           blurRadius: 8,
                           offset: Offset(0, 4)),
+=======
+                      BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
+>>>>>>> 25686b1aee779fb4a2a36597f36bffe292ef34b5
                     ],
                   ),
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+<<<<<<< HEAD
                         Icon(Icons.show_chart,
                             size: 64, color: Colors.deepPurpleAccent),
                         SizedBox(height: 8),
@@ -163,6 +187,13 @@ class HomePage extends StatelessWidget {
                           'View Your Progress',
                           style: TextStyle(
                               fontSize: 18, fontWeight: FontWeight.w600),
+=======
+                        Icon(Icons.show_chart, size: 64, color: Colors.deepPurpleAccent),
+                        SizedBox(height: 8),
+                        Text(
+                          'View Your Progress',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+>>>>>>> 25686b1aee779fb4a2a36597f36bffe292ef34b5
                         ),
                       ],
                     ),
@@ -178,6 +209,10 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 25686b1aee779fb4a2a36597f36bffe292ef34b5
               // ─── Feature Cards ────────────────────────────────
               Expanded(
                 child: GridView.count(
@@ -243,9 +278,13 @@ class _FeatureCard extends StatelessWidget {
             children: [
               Icon(icon, size: 48, color: Colors.deepPurple[700]),
               const SizedBox(height: 12),
+<<<<<<< HEAD
               Text(label,
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.w500)),
+=======
+              Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+>>>>>>> 25686b1aee779fb4a2a36597f36bffe292ef34b5
             ],
           ),
         ),
@@ -268,3 +307,9 @@ class PlaceholderScreen extends StatelessWidget {
     );
   }
 }
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> 25686b1aee779fb4a2a36597f36bffe292ef34b5

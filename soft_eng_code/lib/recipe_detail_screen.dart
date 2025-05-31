@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
 import 'exercise_list.dart';
+=======
+>>>>>>> 25686b1aee779fb4a2a36597f36bffe292ef34b5
 
 class SalmonSaladScreen extends StatelessWidget {
   const SalmonSaladScreen({super.key});
@@ -159,14 +162,21 @@ class _RecipeTemplate extends StatelessWidget {
           Text('Ingredients', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
           ...ingredients.map((item) => ListTile(
+<<<<<<< HEAD
                 leading: const Icon(Icons.check_circle_outline,
                     color: Colors.deepPurple),
                 title: Text(item),
               )),
+=======
+            leading: const Icon(Icons.check_circle_outline, color: Colors.deepPurple),
+            title: Text(item),
+          )),
+>>>>>>> 25686b1aee779fb4a2a36597f36bffe292ef34b5
           const SizedBox(height: 16),
           Text('Steps', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
           ...steps.asMap().entries.map((e) => ListTile(
+<<<<<<< HEAD
                 leading: CircleAvatar(
                   backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
@@ -174,6 +184,15 @@ class _RecipeTemplate extends StatelessWidget {
                 ),
                 title: Text(e.value),
               )),
+=======
+            leading: CircleAvatar(
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+              child: Text('${e.key + 1}'),
+            ),
+            title: Text(e.value),
+          )),
+>>>>>>> 25686b1aee779fb4a2a36597f36bffe292ef34b5
         ],
       ),
     );
