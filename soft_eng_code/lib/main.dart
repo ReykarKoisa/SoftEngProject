@@ -4,6 +4,8 @@ import 'package:soft_eng_code/bmi_tracker.dart';
 import 'package:soft_eng_code/recipe_list_screen.dart';
 import 'package:soft_eng_code/weight_tracker.dart';
 import 'package:soft_eng_code/exercise_list.dart'; // ← Add this line
+import 'package:soft_eng_code/sickness_signs.dart';
+import 'package:soft_eng_code/diagnosis_result_page.dart';
 
 void main() => runApp(const FitnessApp());
 
@@ -29,7 +31,7 @@ class FitnessApp extends StatelessWidget {
         '/weight': (c) => const WeightTracker(),
         '/exercises': (c) => ExerciseListPage(), // ← Replace this line
         '/recipes': (c) => const RecipeListScreen(),
-        '/health': (c) => const PlaceholderScreen(title: 'Health Info'),
+        '/health': (c) => const SicknessSignsPage(),
       },
     );
   }
