@@ -33,16 +33,21 @@ class _WeightTrackerState extends State<WeightTracker> {
       }).toList();
 
       if (weightEntries.isEmpty) {
-        weightEntries = [
-          WeightEntry(day: 1, weight: 80),
-          WeightEntry(day: 2, weight: 79),
-          WeightEntry(day: 3, weight: 78.5),
-          WeightEntry(day: 4, weight: 77.8),
-          WeightEntry(day: 5, weight: 77),
-        ];
+        weightEntries = [];
       }
 
       targetWeight = prefs.getDouble('targetWeight') ?? 70;
+    });
+  }
+
+  Future<void> _clearData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('weights');
+    await prefs.remove('targetWeight');
+
+    setState(() {
+      weightEntries = [];  // Empty list — no pre-existing data
+      targetWeight = 70;   // Or any default target you want
     });
   }
 
@@ -92,10 +97,16 @@ class _WeightTrackerState extends State<WeightTracker> {
   }
 
   Widget _buildChart() {
-    if (weightEntries.isEmpty) return const Text("No data to display.");
+    if (weightEntries.isEmpty) {
+      // Return a placeholder widget or empty chart
+      return Center(child: Text("No data yet"));
+    }
     List<FlSpot> spots = weightEntries
         .map((e) => FlSpot(e.day.toDouble(), e.weight))
         .toList();
+
+    double minY = weightEntries.map((e) => e.weight).reduce((a, b) => a < b ? a : b) - 1;
+    double maxY = weightEntries.map((e) => e.weight).reduce((a, b) => a > b ? a : b) + 1;
 
     return LineChart(
       LineChartData(
@@ -214,13 +225,18 @@ class _WeightTrackerState extends State<WeightTracker> {
                         const SizedBox(height: 12),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
+                          child: weightEntries.isNotEmpty
+                              ? LinearProgressIndicator(
                             minHeight: 10,
                             value: ((weightEntries.first.weight - currentWeight) /
                                 (weightEntries.first.weight - targetWeight))
                                 .clamp(0.0, 1.0),
                             backgroundColor: Colors.white24,
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          )
+                              : Container(
+                            height: 10,
+                            color: Colors.white24,
                           ),
                         ),
                       ],
@@ -255,6 +271,13 @@ class _WeightTrackerState extends State<WeightTracker> {
                 ElevatedButton(
                   onPressed: () => _showInputDialog("Change Target Weight", _changeTargetWeight),
                   child: Text("Change Target"),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                  ),
+                  onPressed: _clearData,
+                  child: Text("Clear"),
                 ),
               ],
             ),
