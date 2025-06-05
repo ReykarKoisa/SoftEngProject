@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class WeightTracker extends StatefulWidget {
   const WeightTracker({super.key});
@@ -10,28 +11,61 @@ class WeightTracker extends StatefulWidget {
 
 class _WeightTrackerState extends State<WeightTracker> {
   List<WeightEntry> weightEntries = [
-    WeightEntry(day: 1, weight: 80),
-    WeightEntry(day: 2, weight: 79),
-    WeightEntry(day: 3, weight: 78.5),
-    WeightEntry(day: 4, weight: 77.8),
-    WeightEntry(day: 5, weight: 77),
   ];
 
-  double get currentWeight => weightEntries.last.weight;
   double targetWeight = 70;
+  double get currentWeight => weightEntries.isNotEmpty ? weightEntries.last.weight : 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedWeights = prefs.getStringList('weights') ?? [];
+
+    setState(() {
+      weightEntries = storedWeights.map((s) {
+        final parts = s.split(',');
+        return WeightEntry(day: int.parse(parts[0]), weight: double.parse(parts[1]));
+      }).toList();
+
+      if (weightEntries.isEmpty) {
+        weightEntries = [
+          WeightEntry(day: 1, weight: 80),
+          WeightEntry(day: 2, weight: 79),
+          WeightEntry(day: 3, weight: 78.5),
+          WeightEntry(day: 4, weight: 77.8),
+          WeightEntry(day: 5, weight: 77),
+        ];
+      }
+
+      targetWeight = prefs.getDouble('targetWeight') ?? 70;
+    });
+  }
+
+  Future<void> _saveData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final weightList = weightEntries.map((e) => '${e.day},${e.weight}').toList();
+    await prefs.setStringList('weights', weightList);
+    await prefs.setDouble('targetWeight', targetWeight);
+  }
 
   void _addCurrentWeight(double newWeight) {
     setState(() {
       weightEntries.add(WeightEntry(day: weightEntries.length + 1, weight: newWeight));
     });
+    _saveData();
   }
 
   void _changeTargetWeight(double newTarget) {
     setState(() {
       targetWeight = newTarget;
     });
+    _saveData();
   }
-
   void _showInputDialog(String title, Function(double) onSubmit) {
     final controller = TextEditingController();
     showDialog(
@@ -58,6 +92,7 @@ class _WeightTrackerState extends State<WeightTracker> {
   }
 
   Widget _buildChart() {
+    if (weightEntries.isEmpty) return const Text("No data to display.");
     List<FlSpot> spots = weightEntries
         .map((e) => FlSpot(e.day.toDouble(), e.weight))
         .toList();
