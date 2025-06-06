@@ -1,7 +1,7 @@
-// lib/main.dart
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+// Main app entry point (can be removed if bmi_tracker is not run standalone)
 void main() {
   runApp(const BMICalculatorApp());
 }
@@ -14,16 +14,19 @@ class BMICalculatorApp extends StatelessWidget {
     return MaterialApp(
       title: 'BMI Calculator',
       theme: ThemeData(
-        primarySwatch: Colors.purple, // comment: change to your brand color
-        scaffoldBackgroundColor: Colors.grey[200],
+        primarySwatch: Colors.deepPurple,
+        scaffoldBackgroundColor: Colors.deepPurple.shade50,
+        fontFamily: 'sans-serif',
       ),
       home: const InputPage(),
     );
   }
 }
 
+// Enum to hold the state for gender selection
 enum Gender { male, female }
 
+// Main input page UI
 class InputPage extends StatefulWidget {
   const InputPage({super.key});
 
@@ -37,97 +40,232 @@ class _InputPageState extends State<InputPage> {
   int weight = 67;
   int age = 30;
 
+  /// Shows a dialog to manually input a numeric value.
+  void _showManualInputDialog({
+    required String title,
+    required String initialValue,
+    required Function(String) onSubmitted,
+  }) {
+    final controller = TextEditingController(text: initialValue);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Enter $title'),
+          content: TextField(
+            controller: controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: title,
+              suffixText: title == 'Height' ? 'cm' : (title == 'Weight' ? 'kg' : ''),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                onSubmitted(controller.text);
+                Navigator.of(context).pop();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    const cardColor = Colors.white;
-    const activeColor = Colors.purple; // comment: swap out for your purple
-    const inactiveColor = Colors.white;
-
     return Scaffold(
-      appBar: AppBar(title: const Text('BMI Calculator')),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            // Gender selector row
-            Row(
-              children: [
-                Expanded(child: _GenderCard(
-                  label: 'Male',
-                  icon: Icons.male, // placeholder icon: swap out if you have asset
-                  isSelected: selectedGender == Gender.male,
-                  onTap: () => setState(() => selectedGender = Gender.male),
-                )),
-                const SizedBox(width: 12),
-                Expanded(child: _GenderCard(
-                  label: 'Female',
-                  icon: Icons.female, // placeholder icon: swap out if you have asset
-                  isSelected: selectedGender == Gender.female,
-                  onTap: () => setState(() => selectedGender = Gender.female),
-                )),
-              ],
+      appBar: AppBar(
+        title: const Text('BMI Calculator'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: Colors.black,
+      ),
+      body: Stack(
+        children: [
+          // Background decorative shapes
+          Positioned(
+            top: -100,
+            left: -100,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
             ),
-            const SizedBox(height: 12),
-            // Height slider card
-            Card(
-              color: cardColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Column(
-                  children: [
-                    const Text('Height', style: TextStyle(fontSize: 18)),
-                    const SizedBox(height: 8),
-                    Text('${height.round()} cm', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                    Slider(
+          ),
+          Positioned(
+            bottom: -120,
+            right: -150,
+            child: Container(
+              width: 350,
+              height: 350,
+              decoration: BoxDecoration(
+                color: Colors.purple.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          // Main scrollable content
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Gender', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _GenderCard(
+                          label: 'Male',
+                          icon: Icons.male,
+                          isSelected: selectedGender == Gender.male,
+                          onTap: () => setState(() => selectedGender = Gender.male),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _GenderCard(
+                          label: 'Female',
+                          icon: Icons.female,
+                          isSelected: selectedGender == Gender.female,
+                          onTap: () => setState(() => selectedGender = Gender.female),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Height Card
+                  _buildTappableCard(
+                    title: 'Height',
+                    value: '${height.round()} cm',
+                    onTap: () => _showManualInputDialog(
+                      title: 'Height',
+                      initialValue: height.round().toString(),
+                      onSubmitted: (val) => setState(() => height = double.tryParse(val) ?? height),
+                    ),
+                    child: Slider(
                       value: height,
                       min: 100,
                       max: 220,
-                      activeColor: activeColor,
+                      activeColor: Colors.deepPurple,
+                      inactiveColor: Colors.deepPurple.shade100,
                       onChanged: (v) => setState(() => height = v),
                     ),
-                  ],
-                ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Weight & Age Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTappableCard(
+                          title: 'Weight',
+                          value: '$weight kg',
+                          onTap: () => _showManualInputDialog(
+                            title: 'Weight',
+                            initialValue: weight.toString(),
+                            onSubmitted: (val) => setState(() => weight = int.tryParse(val) ?? weight),
+                          ),
+                          child: _CounterControls(
+                            onIncrement: () => setState(() => weight++),
+                            onDecrement: () => setState(() => weight--),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildTappableCard(
+                          title: 'Age',
+                          value: '$age',
+                          onTap: () => _showManualInputDialog(
+                            title: 'Age',
+                            initialValue: age.toString(),
+                            onSubmitted: (val) => setState(() => age = int.tryParse(val) ?? age),
+                          ),
+                          child: _CounterControls(
+                            onIncrement: () => setState(() => age++),
+                            onDecrement: () => setState(() => age--),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Calculate Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.calculate_outlined),
+                      label: const Text('Calculate BMI'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.deepPurple,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: () {
+                        if (selectedGender == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please select a gender.'), backgroundColor: Colors.redAccent)
+                          );
+                          return;
+                        }
+                        final bmi = weight / pow(height / 100, 2);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => ResultPage(bmi: bmi)),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            // Age & Weight row
-            Row(
-              children: [
-                Expanded(child: _CounterCard(
-                  label: 'Age',
-                  value: age,
-                  onIncrement: () => setState(() => age++),
-                  onDecrement: () => setState(() => age--),
-                )),
-                const SizedBox(width: 12),
-                Expanded(child: _CounterCard(
-                  label: 'Weight (kg)',
-                  value: weight,
-                  onIncrement: () => setState(() => weight++),
-                  onDecrement: () => setState(() => weight--),
-                )),
-              ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Helper widget to build the main interactive cards.
+  Widget _buildTappableCard({
+    required String title,
+    required String value,
+    required VoidCallback onTap,
+    required Widget child,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Text(title, style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: onTap,
+              child: Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
             ),
-            const Spacer(),
-            // Calculate button
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.calculate),
-                label: const Text('Calculate', style: TextStyle(fontSize: 18)),
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                ),
-                onPressed: () {
-                  final bmi = weight / pow(height / 100, 2);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => ResultPage(bmi: bmi)),
-                  );
-                },
-              ),
-            ),
+            const SizedBox(height: 8),
+            child,
           ],
         ),
       ),
@@ -135,6 +273,7 @@ class _InputPageState extends State<InputPage> {
   }
 }
 
+/// A card for selecting gender.
 class _GenderCard extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -147,61 +286,27 @@ class _GenderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? Colors.purple[100]! : Colors.white;
     return GestureDetector(
       onTap: onTap,
-      child: Card(
-        color: color,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 48, color: Colors.grey[700]), // comment: replace with Image.asset if needed
-              const SizedBox(height: 8),
-              Text(label),
-            ],
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.deepPurple.shade100 : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? Colors.deepPurple : Colors.grey.shade300,
+            width: 2,
           ),
+          boxShadow: isSelected ? [
+            BoxShadow(color: Colors.deepPurple.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))
+          ] : [],
         ),
-      ),
-    );
-  }
-}
-
-class _CounterCard extends StatelessWidget {
-  final String label;
-  final int value;
-  final VoidCallback onIncrement;
-  final VoidCallback onDecrement;
-  const _CounterCard({
-    required this.label,
-    required this.value,
-    required this.onIncrement,
-    required this.onDecrement,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
         child: Column(
           children: [
-            Text(label, style: const TextStyle(fontSize: 16)),
+            Icon(icon, size: 48, color: isSelected ? Colors.deepPurple : Colors.grey.shade700),
             const SizedBox(height: 8),
-            Text('$value', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _RoundIconButton(icon: Icons.remove, onPressed: onDecrement),
-                const SizedBox(width: 16),
-                _RoundIconButton(icon: Icons.add, onPressed: onIncrement),
-              ],
-            ),
+            Text(label, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
           ],
         ),
       ),
@@ -209,6 +314,26 @@ class _CounterCard extends StatelessWidget {
   }
 }
 
+/// The +/- buttons for the counter cards.
+class _CounterControls extends StatelessWidget {
+  final VoidCallback onIncrement;
+  final VoidCallback onDecrement;
+  const _CounterControls({required this.onIncrement, required this.onDecrement});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _RoundIconButton(icon: Icons.remove, onPressed: onDecrement),
+        const SizedBox(width: 24),
+        _RoundIconButton(icon: Icons.add, onPressed: onIncrement),
+      ],
+    );
+  }
+}
+
+/// A stylized round icon button.
 class _RoundIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onPressed;
@@ -218,14 +343,16 @@ class _RoundIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return RawMaterialButton(
       onPressed: onPressed,
+      elevation: 2.0,
+      fillColor: Colors.deepPurple.shade50,
+      constraints: const BoxConstraints.tightFor(width: 48, height: 48),
       shape: const CircleBorder(),
-      fillColor: Colors.grey[200],
-      constraints: const BoxConstraints.tightFor(width: 36, height: 36),
-      child: Icon(icon),
+      child: Icon(icon, color: Colors.deepPurple),
     );
   }
 }
 
+// Result page UI
 class ResultPage extends StatelessWidget {
   final double bmi;
   const ResultPage({required this.bmi, super.key});
@@ -238,55 +365,75 @@ class ResultPage extends StatelessWidget {
     return 'Severely Obese';
   }
 
+  Color get categoryColor {
+    if (bmi < 18.5) return Colors.blue;
+    if (bmi < 25) return Colors.green;
+    if (bmi < 30) return Colors.orange;
+    return Colors.red;
+  }
+
   String get message {
-    if (bmi < 18.5) return 'You are underweight.';
-    if (bmi < 25) return 'You are fit and healthy!';
-    if (bmi < 30) return 'You are overweight.';
-    if (bmi < 40) return 'You are obese.';
-    return 'You are severely obese.';
+    if (bmi < 18.5) return 'You are in the underweight range. Consider speaking with a nutritionist to ensure you are getting enough nutrients.';
+    if (bmi < 25) return 'Great job! Your BMI is in the healthy range. Keep up the balanced lifestyle!';
+    if (bmi < 30) return 'You are in the overweight range. A balanced diet and regular exercise can help you reach a healthier weight.';
+    return 'Your BMI is in the obese range. It is recommended to consult with a healthcare professional to create a safe and effective health plan.';
   }
 
   @override
   Widget build(BuildContext context) {
-    const gaugeBg = Colors.grey;
-    const gaugePointer = Colors.purple; // change to your theme color
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Your BMI')),
+      appBar: AppBar(
+        title: const Text('Your Result'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: Colors.black,
+      ),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 12),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Gauge
+              const Spacer(),
               SizedBox(
-                width: 200,
-                height: 120,
+                width: 250,
+                height: 250,
                 child: CustomPaint(
-                  painter: _GaugePainter(bmi: bmi, bgColor: gaugeBg, pointerColor: gaugePointer),
+                  painter: _GaugePainter(bmi: bmi, categoryColor: categoryColor),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Your BMI', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                        Text(bmi.toStringAsFixed(1), style: const TextStyle(fontSize: 56, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                category,
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: categoryColor),
+              ),
+              const SizedBox(height: 12),
+              Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, height: 1.5)),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  child: const Text('Re-Calculate'),
                 ),
               ),
               const SizedBox(height: 16),
-              Text(bmi.toStringAsFixed(1), style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text(category, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 4),
-              Text(message, textAlign: TextAlign.center),
-              const Spacer(),
-              // Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Re-Calculate'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-                    child: const Text('Home'),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -295,39 +442,40 @@ class ResultPage extends StatelessWidget {
   }
 }
 
+/// A custom painter for the beautiful radial BMI gauge.
 class _GaugePainter extends CustomPainter {
   final double bmi;
-  final Color bgColor;
-  final Color pointerColor;
+  final Color categoryColor;
 
-  _GaugePainter({required this.bmi, required this.bgColor, required this.pointerColor});
+  _GaugePainter({required this.bmi, required this.categoryColor});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width/2, size.height);
-    final radius = size.width/2;
-    final rect = Rect.fromCircle(center: center, radius: radius);
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    const strokeWidth = 20.0;
+    const totalAngle = 1.5 * pi; // 270 degrees
+    const startAngle = -1.25 * pi; // Start from bottom-left
 
+    // Background Arc
     final bgPaint = Paint()
-      ..color = bgColor.withOpacity(0.3)
+      ..color = Colors.grey.shade300
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 16;
-
-    canvas.drawArc(rect, pi, pi, false, bgPaint);
-
-    // pointer sweep
-    final maxBMI = 50.0;
-    final sweep = (bmi.clamp(0, maxBMI) / maxBMI) * pi;
-    final pointerPaint = Paint()
-      ..color = pointerColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 16
+      ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
+    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), startAngle, totalAngle, false, bgPaint);
 
-    canvas.drawArc(rect, pi, sweep, false, pointerPaint);
+    // Value Arc
+    final maxBmiForGauge = 40.0;
+    final sweepAngle = (bmi.clamp(0, maxBmiForGauge) / maxBmiForGauge) * totalAngle;
+    final valuePaint = Paint()
+      ..color = categoryColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), startAngle, sweepAngle, false, valuePaint);
   }
 
   @override
   bool shouldRepaint(covariant _GaugePainter old) => old.bmi != bmi;
 }
-

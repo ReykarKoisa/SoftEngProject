@@ -5,7 +5,6 @@ import 'package:soft_eng_code/recipe_list_screen.dart';
 import 'package:soft_eng_code/weight_tracker.dart';
 import 'package:soft_eng_code/exercise_list.dart'; // ← Add this line
 import 'package:soft_eng_code/sickness_signs.dart';
-import 'package:soft_eng_code/diagnosis_result_page.dart';
 
 void main() => runApp(const FitnessApp());
 
@@ -37,10 +36,39 @@ class FitnessApp extends StatelessWidget {
   }
 }
 
-// ─── Curved Welcome Page (unchanged) ─────────────────────────────────────────
+// ─── Curved Welcome Page (UPDATED with Animation and Styling) ──────────────────
 
-class WelcomePage extends StatelessWidget {
+class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
+
+  @override
+  State<WelcomePage> createState() => _WelcomePageState();
+}
+
+class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeIn,
+    );
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,40 +79,49 @@ class WelcomePage extends StatelessWidget {
           ClipPath(
             clipper: _BottomWaveClipper(),
             child: Container(
-              height: MediaQuery.of(context).size.height * 0.45,
+              height: MediaQuery.of(context).size.height * 0.4,
               color: Colors.deepPurple,
+              // You can add an image here if you like
+              // child: Image.asset('assets/your_welcome_image.png', fit: BoxFit.cover),
             ),
           ),
-          const SizedBox(height: 24),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              'Hey User! Ready to\nlevel up\nyour health?',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          const SizedBox(height: 48),
+          FadeTransition(
+            opacity: _fadeAnimation,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Hey User! Ready to\nlevel up your health?',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, height: 1.3),
+              ),
             ),
           ),
           const Spacer(),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepPurple,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+          FadeTransition(
+            opacity: _fadeAnimation,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.white, // CHANGE: Ensures text is bright white
+                backgroundColor: Colors.deepPurple,
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 18), // CHANGE: Increased padding
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                elevation: 5,
               ),
-              elevation: 4,
-            ),
-            onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Text('Get Started', style: TextStyle(fontSize: 18)),
-                SizedBox(width: 8),
-                Icon(Icons.arrow_forward),
-              ],
+              onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Get Started', style: TextStyle(fontSize: 19)), // CHANGE: Increased font size
+                  SizedBox(width: 10),
+                  Icon(Icons.arrow_forward),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 60), // CHANGE: Increased bottom spacing
         ],
       ),
     );
@@ -96,8 +133,7 @@ class _BottomWaveClipper extends CustomClipper<Path> {
   Path getClip(Size size) {
     final path = Path();
     path.lineTo(0, size.height - 60);
-    path.quadraticBezierTo(
-        size.width / 2, size.height + 40, size.width, size.height - 60);
+    path.quadraticBezierTo(size.width / 2, size.height + 40, size.width, size.height - 60);
     path.lineTo(size.width, 0);
     path.close();
     return path;
@@ -107,7 +143,7 @@ class _BottomWaveClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> old) => false;
 }
 
-// ─── Updated Home Page ────────────────────────────────────────────────────────
+// ─── Home Page (unchanged) ──────────────────────────────────────────────────
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -131,56 +167,42 @@ class HomePage extends StatelessWidget {
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-
-              // ─── Graph Placeholder ─────────────────────────────
               GestureDetector(
                 onTap: () => Navigator.pushNamed(context, '/weight'),
                 child: Container(
                   height: 200,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        Colors.white,
-                        Colors.deepPurple.withOpacity(0.1)
-                      ],
+                      colors: [Colors.white, Colors.deepPurple.withOpacity(0.1)],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: const [
-                      BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 8,
-                          offset: Offset(0, 4)),
+                      BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
                     ],
                   ),
-                  child: Center(
+                  child: const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.show_chart,
-                            size: 64, color: Colors.deepPurpleAccent),
+                        Icon(Icons.show_chart, size: 64, color: Colors.deepPurpleAccent),
                         SizedBox(height: 8),
                         Text(
                           'View Your Progress',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.w600),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
-
               const SizedBox(height: 24),
-
               const Text(
                 'For you',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 12),
-
-              // ─── Feature Cards ────────────────────────────────
               Expanded(
                 child: GridView.count(
                   crossAxisCount: 2,
@@ -245,28 +267,11 @@ class _FeatureCard extends StatelessWidget {
             children: [
               Icon(icon, size: 48, color: Colors.deepPurple[700]),
               const SizedBox(height: 12),
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w500)),
+              Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-// ─── Placeholder Screen ──────────────────────────────────────────────────────
-
-class PlaceholderScreen extends StatelessWidget {
-  final String title;
-  const PlaceholderScreen({super.key, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(child: Text('This is the $title page')),
     );
   }
 }

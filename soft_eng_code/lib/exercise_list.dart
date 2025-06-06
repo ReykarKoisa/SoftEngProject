@@ -1,112 +1,108 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Exercise Timer',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        fontFamily: 'OpenSans',
-      ),
-      home: ExerciseListPage(),
-    );
-  }
-}
-
 class Exercise {
   final String name;
   final int duration; // in seconds
   final int sets;
+  final String imagePath;
 
-  Exercise({required this.name, required this.duration, required this.sets});
+  Exercise({
+    required this.name,
+    required this.duration,
+    required this.sets,
+    required this.imagePath,
+  });
 }
 
 class ExerciseListPage extends StatelessWidget {
+  ExerciseListPage({super.key});
+
   final List<Exercise> exercises = [
-    Exercise(name: 'Jump Squats', duration: 90, sets: 3),
-    Exercise(name: 'Jump Rope', duration: 120, sets: 5),
-    Exercise(name: 'Running', duration: 240, sets: 3),
-    Exercise(name: 'Sit-Up', duration: 60, sets: 3),
-    Exercise(name: 'Push-Up', duration: 60, sets: 3),
+    Exercise(name: 'Jump Squats', duration: 90, sets: 3, imagePath: 'assets/jump_squats.png'),
+    Exercise(name: 'Jump Rope', duration: 120, sets: 5, imagePath: 'assets/jump_rope.png'),
+    Exercise(name: 'Running', duration: 240, sets: 3, imagePath: 'assets/running.png'),
+    Exercise(name: 'Sit-Up', duration: 60, sets: 3, imagePath: 'assets/sit-up.png'),
+    Exercise(name: 'Push-Up', duration: 60, sets: 3, imagePath: 'assets/push-up.png'),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'My Exercises',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 26, // slightly bigger than the default (~20)
-          ),
-        ),
+        title: const Text('Choose Your Exercise'),
+        backgroundColor: Colors.deepPurple,
       ),
-      body: ListView.builder(
-        padding: EdgeInsets.all(16),
-        itemCount: exercises.length,
-        itemBuilder: (context, index) {
-          final exercise = exercises[index];
-          return GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TimerPage(exercise: exercise),
+      backgroundColor: Colors.deepPurple.shade50,
+      body: Stack(
+        children: [
+          // Background shapes
+          Positioned(
+            top: -50,
+            left: -100,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -80,
+            right: -120,
+            child: Container(
+              width: 280,
+              height: 280,
+              decoration: BoxDecoration(
+                color: Colors.purple.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          // Main list content
+          ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: exercises.length,
+            itemBuilder: (context, index) {
+              final exercise = exercises[index];
+              return Card(
+                elevation: 3.0,
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16.0),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(8.0),
+                    child: Image.asset(
+                      exercise.imagePath,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  title: Text(
+                    exercise.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  subtitle: Text('${exercise.duration} seconds  •  ${exercise.sets} sets'),
+                  trailing: const Icon(Icons.arrow_forward_ios, color: Colors.deepPurple),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TimerPage(exercise: exercise),
+                      ),
+                    );
+                  },
                 ),
               );
             },
-            child: Container(
-              height: 120,
-              margin: EdgeInsets.only(bottom: 16),
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.blue[100],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage(
-                            'assets/${exercise.name.toLowerCase().replaceAll(' ', '_')}.png'),
-                        fit: BoxFit.cover,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(exercise.name,
-                            style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
-                        Text('${exercise.duration} seconds',
-                            style: TextStyle(fontSize: 16)),
-                        Text('${exercise.sets} sets',
-                            style: TextStyle(fontSize: 16)),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.play_circle_fill,
-                      size: 40, color: Colors.blueAccent),
-                ],
-              ),
-            ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -115,7 +111,7 @@ class ExerciseListPage extends StatelessWidget {
 class TimerPage extends StatefulWidget {
   final Exercise exercise;
 
-  TimerPage({required this.exercise});
+  const TimerPage({super.key, required this.exercise});
 
   @override
   _TimerPageState createState() => _TimerPageState();
@@ -136,9 +132,9 @@ class _TimerPageState extends State<TimerPage> {
   }
 
   void startTimer() {
-    if (currentSet > totalSets) return;
+    if (currentSet > totalSets) return; // Don't start if all sets are done
     setState(() => isRunning = true);
-    timer = Timer.periodic(Duration(seconds: 1), (t) {
+    timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (remainingTime > 0) {
         setState(() => remainingTime--);
       } else {
@@ -173,123 +169,99 @@ class _TimerPageState extends State<TimerPage> {
 
   @override
   Widget build(BuildContext context) {
-    final h = MediaQuery.of(context).size.height;
-    final w = MediaQuery.of(context).size.width;
+    final bool isFinished = currentSet > totalSets || (currentSet == totalSets && remainingTime == 0);
+    double progress = isFinished ? 1.0 : remainingTime / widget.exercise.duration;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.exercise.name,
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+        title: Text(widget.exercise.name),
+        backgroundColor: Colors.deepPurple,
+        elevation: 0,
       ),
-      body: Stack(
-        children: [
-          // ☑ Enlarged circle: now 200% of previous (was w*1.5 × h*0.4, now w*3 × h*0.8)
-          Positioned(
-            bottom: -h * 0.4,
-            left: -w * 0.25,
-            right: -w * 0.25, // adjusted from -w * 0.75
-            child: Container(
-              width: w * 4,
-              height: h * 0.85,
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                shape: BoxShape.circle,
+      backgroundColor: Colors.deepPurple.shade50,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // Exercise Image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16.0),
+                child: Image.asset(widget.exercise.imagePath, height: 150, fit: BoxFit.cover),
               ),
-            ),
-          ),
 
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Text(widget.exercise.name,
-                    style:
-                        TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                SizedBox(height: 16),
-
-                // Exercise Card
-                Container(
-                  height: 120,
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 70,
-                        height: 70,
-                        decoration: BoxDecoration(
-                          image: DecorationImage(
-                            image: AssetImage(
-                                'assets/${widget.exercise.name.toLowerCase().replaceAll(' ', '_')}.png'),
-                            fit: BoxFit.cover,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(widget.exercise.name,
-                                style: TextStyle(
-                                    fontSize: 20, fontWeight: FontWeight.bold)),
-                            Text('${widget.exercise.duration} seconds',
-                                style: TextStyle(fontSize: 16)),
-                            Text('${widget.exercise.sets} sets',
-                                style: TextStyle(fontSize: 16)),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.play_circle_fill,
-                          size: 40, color: Colors.blueAccent),
-                    ],
-                  ),
-                ),
-
-                SizedBox(height: 24),
-                Text('Progress',
-                    style:
-                        TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                SizedBox(height: 16),
-                Text(formatTime(remainingTime),
-                    style:
-                        TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
-                SizedBox(height: 16),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              // Radial Timer
+              SizedBox(
+                width: 250,
+                height: 250,
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    ElevatedButton.icon(
-                      onPressed: isRunning ? null : startTimer,
-                      icon: Icon(Icons.play_arrow),
-                      label: Text('Play'),
+                    CircularProgressIndicator(
+                      value: 1.0 - progress,
+                      strokeWidth: 12,
+                      backgroundColor: Colors.grey.shade300,
+                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.deepPurple),
                     ),
-                    SizedBox(width: 16),
-                    ElevatedButton.icon(
-                      onPressed: isRunning ? pauseTimer : null,
-                      icon: Icon(Icons.pause),
-                      label: Text('Pause'),
+                    Center(
+                      child: Text(
+                        formatTime(remainingTime),
+                        style: const TextStyle(fontSize: 64, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ],
                 ),
+              ),
 
-                SizedBox(height: 16),
-                Text('Set $currentSet / $totalSets',
-                    style:
-                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                if (currentSet > totalSets)
-                  Text('Finished',
-                      style:
-                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              ],
-            ),
+              // Sets and Controls
+              Column(
+                children: [
+                  Text(
+                    isFinished ? 'Workout Complete!' : 'Set $currentSet / $totalSets',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: isFinished ? Colors.green : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  if (!isFinished)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: isRunning ? pauseTimer : startTimer,
+                          icon: Icon(isRunning ? Icons.pause : Icons.play_arrow),
+                          label: Text(isRunning ? 'Pause' : 'Play'),
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: isRunning ? Colors.orange : Colors.deepPurple,
+                            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            textStyle: const TextStyle(fontSize: 18),
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (isFinished)
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.check_circle),
+                      label: const Text('Finish'),
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.green,
+                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        textStyle: const TextStyle(fontSize: 18),
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
