@@ -1,7 +1,12 @@
+// lib/weight_tracker.dart
+
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'dart:math';
+import 'package:intl/intl.dart';
+import 'package:soft_eng_code/exercise_list.dart'; // Import exercise_list.dart to get model access
 
 class WeightTracker extends StatefulWidget {
   const WeightTracker({super.key});
@@ -25,21 +30,69 @@ class _WeightTrackerState extends State<WeightTracker> {
 
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
-    final storedWeights = prefs.getStringList('weights') ?? [];
+    final storedWeightsJSON = prefs.getStringList('weight_entries_v2') ?? [];
+    List<WeightEntry> loadedEntries = [];
+
+    for (String jsonEntry in storedWeightsJSON) {
+      final entryMap = jsonDecode(jsonEntry);
+      final entry = WeightEntry.fromJson(entryMap);
+
+      final dateKey = DateFormat('yyyy-MM-dd').format(entry.date);
+      final exercisesJson = prefs.getStringList('exercises_$dateKey') ?? [];
+
+      if (exercisesJson.isNotEmpty) {
+        entry.exercises = exercisesJson
+            .map((json) => CompletedExercise.fromJson(jsonDecode(json)))
+            .toList();
+      }
+      loadedEntries.add(entry);
+    }
+
     setState(() {
-      weightEntries = storedWeights.map((s) {
-        final parts = s.split(',');
-        return WeightEntry(day: int.parse(parts[0]), weight: double.parse(parts[1]));
-      }).toList();
+      weightEntries = loadedEntries;
       targetWeight = prefs.getDouble('targetWeight') ?? 70;
     });
   }
 
+  String _formatExercise(CompletedExercise ex) {
+    List<String> details = [];
+    if (ex.sets != null && ex.sets!.isNotEmpty) details.add('${ex.sets} sets');
+    if (ex.reps != null && ex.reps!.isNotEmpty) details.add('${ex.reps} reps');
+    if (ex.duration != null && ex.duration!.isNotEmpty) details.add('${ex.duration} min');
+    if (ex.distance != null && ex.distance!.isNotEmpty) details.add('${ex.distance} km');
+
+    return '${ex.name}: ${details.join(" / ")}';
+  }
+
+  // ... (The rest of the _WeightTrackerState class is unchanged)
   Future<void> _saveData() async {
     final prefs = await SharedPreferences.getInstance();
-    final weightList = weightEntries.map((e) => '${e.day},${e.weight}').toList();
-    await prefs.setStringList('weights', weightList);
+    final weightListJSON = weightEntries.map((e) => jsonEncode(e.toJson())).toList();
+    await prefs.setStringList('weight_entries_v2', weightListJSON);
     await prefs.setDouble('targetWeight', targetWeight);
+  }
+
+  void _addCurrentWeight(double newWeight) async {
+    final today = DateTime.now();
+    final todayDateOnly = DateTime(today.year, today.month, today.day);
+
+    setState(() {
+      // Check if there is already an entry for today and update it
+      final todayEntryIndex = weightEntries.indexWhere((entry) =>
+      entry.date.year == todayDateOnly.year &&
+          entry.date.month == todayDateOnly.month &&
+          entry.date.day == todayDateOnly.day);
+
+      if (todayEntryIndex != -1) {
+        weightEntries[todayEntryIndex].weight = newWeight;
+      } else {
+        weightEntries.add(WeightEntry(date: todayDateOnly, weight: newWeight));
+      }
+      // Keep the list sorted by date
+      weightEntries.sort((a, b) => a.date.compareTo(b.date));
+    });
+    await _saveData();
+    await _loadData(); // Reload to fetch associated exercises
   }
 
   Future<void> _clearData() async {
@@ -47,11 +100,22 @@ class _WeightTrackerState extends State<WeightTracker> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Clear History?'),
-        content: const Text('This will delete all your weight entries. This action cannot be undone.'),
+        content: const Text('This will delete all your weight and exercise entries. This action cannot be undone.'),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('weight_entries_v2');
+              // Also clear exercise data
+              final keys = prefs.getKeys();
+              for (String key in keys) {
+                if (key.startsWith('exercises_')) {
+                  await prefs.remove(key);
+                }
+              }
+              Navigator.of(context).pop(true);
+            },
             child: const Text('Clear', style: TextStyle(color: Colors.red)),
           ),
         ],
@@ -59,65 +123,7 @@ class _WeightTrackerState extends State<WeightTracker> {
     );
 
     if (confirmed ?? false) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('weights');
       setState(() => weightEntries = []);
-    }
-  }
-
-
-  void _showRecommendationDialog({required String title, required String content}) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(content),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("OK")),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.pushNamed(context, '/exercises');
-            },
-            child: const Text("View Exercises"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _addCurrentWeight(double newWeight) {
-    if (weightEntries.isNotEmpty && newWeight == weightEntries.last.weight) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Weight is the same as last entry. Not stored."), duration: Duration(seconds: 2)),
-      );
-      return;
-    }
-
-    final double? previousWeight = weightEntries.isNotEmpty ? weightEntries.last.weight : null;
-
-    setState(() {
-      weightEntries.add(WeightEntry(day: (weightEntries.lastOrNull?.day ?? 0) + 1, weight: newWeight));
-    });
-    _saveData();
-
-    if (previousWeight != null) {
-      double weightChange = newWeight - previousWeight;
-
-      // CHANGE: Updated the threshold to > 2kg for gain
-      if (weightChange > 2) {
-        _showRecommendationDialog(
-          title: "Significant Weight Gain Recorded",
-          content: "A sudden weight gain of over 2kg has been noted. While fluctuations are normal, it's wise to be mindful. Regular activity can help. If this trend continues, consider consulting a healthcare professional.",
-        );
-      }
-      // CHANGE: Updated the threshold to > 2kg for loss
-      else if (weightChange < -2) {
-        _showRecommendationDialog(
-          title: "Significant Weight Loss Recorded",
-          content: "A rapid weight loss of over 2kg has been noted. Please ensure you are nourishing your body adequately. For health and sustainable results, a slower pace is often recommended. Consider consulting a healthcare professional.",
-        );
-      }
     }
   }
 
@@ -152,13 +158,21 @@ class _WeightTrackerState extends State<WeightTracker> {
   }
 
   Widget _buildChart() {
-    if (weightEntries.isEmpty) {
+    if (weightEntries.length < 2) {
       return Center(
-        child: Text("Add a weight entry to see your progress!", style: TextStyle(color: Colors.grey[600])),
+        child: Text(
+          "Add at least two weight entries to see your progress chart!",
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey[600], fontSize: 16),
+        ),
       );
     }
 
-    final spots = weightEntries.map((e) => FlSpot(e.day.toDouble(), e.weight)).toList();
+    final spots = weightEntries
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value.weight))
+        .toList();
     final minY = weightEntries.map((e) => e.weight).reduce(min) - 2;
     final maxY = weightEntries.map((e) => e.weight).reduce(max) + 2;
 
@@ -175,28 +189,22 @@ class _WeightTrackerState extends State<WeightTracker> {
           },
         ),
         titlesData: FlTitlesData(
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 40,
-              getTitlesWidget: (value, meta) => Text(
-                value.toStringAsFixed(0),
-                style: const TextStyle(color: Colors.black, fontSize: 12),
-                textAlign: TextAlign.left,
-              ),
-            ),
-          ),
+          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
           bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 32,
-              interval: 1,
-              getTitlesWidget: (value, meta) => Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text('D${value.toInt()}', style: const TextStyle(fontSize: 12)),
-              ),
-            ),
-          ),
+              sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 32,
+                  interval: 1,
+                  getTitlesWidget: (value, meta) {
+                    final index = value.toInt();
+                    if (index >= 0 && index < weightEntries.length) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(DateFormat('d MMM').format(weightEntries[index].date)),
+                      );
+                    }
+                    return const Text('');
+                  })),
           topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
@@ -206,12 +214,13 @@ class _WeightTrackerState extends State<WeightTracker> {
             tooltipBgColor: Colors.deepPurple,
             getTooltipItems: (touchedSpots) {
               return touchedSpots.map((spot) {
+                final entry = weightEntries[spot.spotIndex];
                 return LineTooltipItem(
-                  '${spot.y.toStringAsFixed(1)} kg\n',
+                  '${entry.weight.toStringAsFixed(1)} kg\n',
                   const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   children: [
                     TextSpan(
-                      text: 'Day ${spot.x.toInt()}',
+                      text: DateFormat('MMM d,快樂').format(entry.date),
                       style: TextStyle(color: Colors.white.withOpacity(0.8)),
                     ),
                   ],
@@ -241,14 +250,8 @@ class _WeightTrackerState extends State<WeightTracker> {
       ),
     );
   }
-
   @override
   Widget build(BuildContext context) {
-    double progressValue = 0.0;
-    if (weightEntries.isNotEmpty && startingWeight != targetWeight) {
-      progressValue = ((startingWeight - currentWeight) / (startingWeight - targetWeight)).clamp(0.0, 1.0);
-    }
-
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -258,61 +261,13 @@ class _WeightTrackerState extends State<WeightTracker> {
         ),
         body: TabBarView(
           children: [
+            // Overview Tab
             SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 250, child: _buildChart()),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: const LinearGradient(
-                        colors: [Colors.deepPurple, Colors.purpleAccent],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Your Progress", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text("Current", style: TextStyle(color: Colors.white70)),
-                                Text("${currentWeight.toStringAsFixed(1)} kg", style: const TextStyle(color: Colors.white, fontSize: 18)),
-                              ],
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                const Text("Target", style: TextStyle(color: Colors.white70)),
-                                Text("${targetWeight.toStringAsFixed(1)} kg", style: const TextStyle(color: Colors.white, fontSize: 18)),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            minHeight: 10,
-                            value: progressValue,
-                            backgroundColor: Colors.white24,
-                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 24),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -322,7 +277,7 @@ class _WeightTrackerState extends State<WeightTracker> {
                         ElevatedButton.icon(
                           icon: const Icon(Icons.add),
                           label: const Text("Add Weight"),
-                          onPressed: () => _showInputDialog("Add Current Weight", _addCurrentWeight),
+                          onPressed: () => _showInputDialog("Add Today's Weight", _addCurrentWeight),
                         ),
                         ElevatedButton.icon(
                           icon: const Icon(Icons.flag),
@@ -340,14 +295,50 @@ class _WeightTrackerState extends State<WeightTracker> {
                 ],
               ),
             ),
+
+            // History Tab
             ListView.builder(
               padding: const EdgeInsets.all(16.0),
               itemCount: weightEntries.length,
               itemBuilder: (context, index) {
                 final entry = weightEntries.reversed.toList()[index];
-                return ListTile(
-                  title: Text("Day ${entry.day}"),
-                  trailing: Text("${entry.weight.toStringAsFixed(1)} kg"),
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              DateFormat('EEEE, MMM d, yyyy').format(entry.date),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            Text(
+                              "${entry.weight.toStringAsFixed(1)} kg",
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.deepPurple),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 20),
+                        if (entry.exercises.isNotEmpty) ...[
+                          const Text("Completed Exercises:", style: TextStyle(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 8),
+                          ...entry.exercises.map((ex) => Padding(
+                            padding: const EdgeInsets.only(bottom: 4.0),
+                            child: Text("• ${_formatExercise(ex)}"),
+                          ))
+                        ] else ...[
+                          Text(
+                            "No exercises recorded for this day.",
+                            style: TextStyle(color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                          )
+                        ]
+                      ],
+                    ),
+                  ),
                 );
               },
             ),
@@ -359,7 +350,19 @@ class _WeightTrackerState extends State<WeightTracker> {
 }
 
 class WeightEntry {
-  final int day;
-  final double weight;
-  WeightEntry({required this.day, required this.weight});
+  DateTime date;
+  double weight;
+  List<CompletedExercise> exercises;
+
+  WeightEntry({required this.date, required this.weight, this.exercises = const []});
+
+  Map<String, dynamic> toJson() => {
+    'date': date.toIso8601String(),
+    'weight': weight,
+  };
+
+  factory WeightEntry.fromJson(Map<String, dynamic> json) => WeightEntry(
+    date: DateTime.parse(json['date']),
+    weight: json['weight'],
+  );
 }

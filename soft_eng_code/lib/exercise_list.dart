@@ -1,267 +1,248 @@
+// lib/exercise_list.dart
+
 import 'package:flutter/material.dart';
-import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:intl/intl.dart';
+
+// ------------------- MODELS (Integrated into this file) -------------------
+
+enum ExerciseType { reps, cardio }
 
 class Exercise {
   final String name;
-  final int duration; // in seconds
-  final int sets;
   final String imagePath;
+  final ExerciseType type;
 
   Exercise({
     required this.name,
-    required this.duration,
-    required this.sets,
     required this.imagePath,
+    required this.type,
   });
 }
 
-class ExerciseListPage extends StatelessWidget {
-  ExerciseListPage({super.key});
+class CompletedExercise {
+  String name;
+  String? sets;
+  String? reps;
+  String? duration; // in minutes
+  String? distance; // in km
 
-  final List<Exercise> exercises = [
-    Exercise(name: 'Jump Squats', duration: 90, sets: 3, imagePath: 'assets/jump_squats.png'),
-    Exercise(name: 'Jump Rope', duration: 120, sets: 5, imagePath: 'assets/jump_rope.png'),
-    Exercise(name: 'Running', duration: 240, sets: 3, imagePath: 'assets/running.png'),
-    Exercise(name: 'Sit-Up', duration: 60, sets: 3, imagePath: 'assets/sit-up.png'),
-    Exercise(name: 'Push-Up', duration: 60, sets: 3, imagePath: 'assets/push-up.png'),
-  ];
+  CompletedExercise({
+    required this.name,
+    this.sets,
+    this.reps,
+    this.duration,
+    this.distance,
+  });
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Choose Your Exercise'),
-        backgroundColor: Colors.deepPurple,
-      ),
-      backgroundColor: Colors.deepPurple.shade50,
-      body: Stack(
-        children: [
-          // Background shapes
-          Positioned(
-            top: -50,
-            left: -100,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.deepPurple.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -80,
-            right: -120,
-            child: Container(
-              width: 280,
-              height: 280,
-              decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          // Main list content
-          ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: exercises.length,
-            itemBuilder: (context, index) {
-              final exercise = exercises[index];
-              return Card(
-                elevation: 3.0,
-                margin: const EdgeInsets.symmetric(vertical: 8.0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(8.0),
-                    child: Image.asset(
-                      exercise.imagePath,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  title: Text(
-                    exercise.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                  subtitle: Text('${exercise.duration} seconds  •  ${exercise.sets} sets'),
-                  trailing: const Icon(Icons.arrow_forward_ios, color: Colors.deepPurple),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => TimerPage(exercise: exercise),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'sets': sets,
+    'reps': reps,
+    'duration': duration,
+    'distance': distance,
+  };
+
+  factory CompletedExercise.fromJson(Map<String, dynamic> json) {
+    return CompletedExercise(
+      name: json['name'],
+      sets: json['sets'],
+      reps: json['reps'],
+      duration: json['duration'],
+      distance: json['distance'],
     );
   }
 }
 
-class TimerPage extends StatefulWidget {
-  final Exercise exercise;
+// ------------------- UI CODE -------------------
 
-  const TimerPage({super.key, required this.exercise});
+class ExerciseListPage extends StatefulWidget {
+  ExerciseListPage({super.key});
+
+  final List<Exercise> exercises = [
+    Exercise(name: 'Jump Squats', imagePath: 'assets/jump_squats.png', type: ExerciseType.reps),
+    Exercise(name: 'Push-Up', imagePath: 'assets/push-up.png', type: ExerciseType.reps),
+    Exercise(name: 'Sit-Up', imagePath: 'assets/sit-up.png', type: ExerciseType.reps),
+    Exercise(name: 'Running', imagePath: 'assets/running.png', type: ExerciseType.cardio),
+    Exercise(name: 'Jump Rope', imagePath: 'assets/jump_rope.png', type: ExerciseType.cardio),
+  ];
 
   @override
-  _TimerPageState createState() => _TimerPageState();
+  _ExerciseListPageState createState() => _ExerciseListPageState();
 }
 
-class _TimerPageState extends State<TimerPage> {
-  late int remainingTime;
-  late int totalSets;
-  int currentSet = 1;
-  Timer? timer;
-  bool isRunning = false;
+class _ExerciseListPageState extends State<ExerciseListPage> {
+  final Map<String, bool> _selectedExercises = {};
+  final Map<String, CompletedExercise> _exerciseData = {};
 
   @override
   void initState() {
     super.initState();
-    remainingTime = widget.exercise.duration;
-    totalSets = widget.exercise.sets;
+    for (var exercise in widget.exercises) {
+      _selectedExercises[exercise.name] = false;
+      _exerciseData[exercise.name] = CompletedExercise(name: exercise.name);
+    }
   }
 
-  void startTimer() {
-    if (currentSet > totalSets) return; // Don't start if all sets are done
-    setState(() => isRunning = true);
-    timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (remainingTime > 0) {
-        setState(() => remainingTime--);
-      } else {
-        t.cancel();
-        setState(() {
-          isRunning = false;
-          if (currentSet < totalSets) {
-            currentSet++;
-            remainingTime = widget.exercise.duration;
-          }
-        });
+  void _saveExercises() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<CompletedExercise> completed = [];
+
+    _selectedExercises.forEach((name, isSelected) {
+      if (isSelected) {
+        completed.add(_exerciseData[name]!);
       }
     });
+
+    if (completed.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select and fill in at least one exercise.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final List<String> jsonList = completed.map((e) => jsonEncode(e.toJson())).toList();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    await prefs.setStringList('exercises_$today', jsonList);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Your exercises for today have been saved!'),
+        backgroundColor: Colors.green,
+      ),
+    );
+    Navigator.of(context).pop();
   }
 
-  void pauseTimer() {
-    timer?.cancel();
-    setState(() => isRunning = false);
-  }
+  Widget _buildInputFields(Exercise exercise) {
+    CompletedExercise data = _exerciseData[exercise.name]!;
 
-  String formatTime(int seconds) {
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-  }
-
-  @override
-  void dispose() {
-    timer?.cancel();
-    super.dispose();
+    if (exercise.type == ExerciseType.reps) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                onChanged: (value) => data.sets = value,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Sets'),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextField(
+                onChanged: (value) => data.reps = value,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Reps'),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else { // Cardio
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                onChanged: (value) => data.duration = value,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Duration (min)'),
+              ),
+            ),
+            if (exercise.name == 'Running') ...[
+              const SizedBox(width: 16),
+              Expanded(
+                child: TextField(
+                  onChanged: (value) => data.distance = value,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'Distance (km)'),
+                ),
+              ),
+            ]
+          ],
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isFinished = currentSet > totalSets || (currentSet == totalSets && remainingTime == 0);
-    double progress = isFinished ? 1.0 : remainingTime / widget.exercise.duration;
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.exercise.name),
+        title: const Text('Today\'s Exercises'),
         backgroundColor: Colors.deepPurple,
-        elevation: 0,
       ),
       backgroundColor: Colors.deepPurple.shade50,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              // Exercise Image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16.0),
-                child: Image.asset(widget.exercise.imagePath, height: 150, fit: BoxFit.cover),
-              ),
-
-              // Radial Timer
-              SizedBox(
-                width: 250,
-                height: 250,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CircularProgressIndicator(
-                      value: 1.0 - progress,
-                      strokeWidth: 12,
-                      backgroundColor: Colors.grey.shade300,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.deepPurple),
-                    ),
-                    Center(
-                      child: Text(
-                        formatTime(remainingTime),
-                        style: const TextStyle(fontSize: 64, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Sets and Controls
-              Column(
-                children: [
-                  Text(
-                    isFinished ? 'Workout Complete!' : 'Set $currentSet / $totalSets',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: isFinished ? Colors.green : Colors.black87,
-                    ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: widget.exercises.length,
+              itemBuilder: (context, index) {
+                final exercise = widget.exercises[index];
+                return Card(
+                  elevation: 2.0,
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16.0),
                   ),
-                  const SizedBox(height: 24),
-                  if (!isFinished)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: isRunning ? pauseTimer : startTimer,
-                          icon: Icon(isRunning ? Icons.pause : Icons.play_arrow),
-                          label: Text(isRunning ? 'Pause' : 'Play'),
-                          style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: isRunning ? Colors.orange : Colors.deepPurple,
-                            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                            textStyle: const TextStyle(fontSize: 18),
+                  child: Column(
+                    children: [
+                      CheckboxListTile(
+                        title: Text(exercise.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        value: _selectedExercises[exercise.name],
+                        onChanged: (bool? value) {
+                          setState(() {
+                            _selectedExercises[exercise.name] = value!;
+                          });
+                        },
+                        secondary: ClipRRect(
+                          borderRadius: BorderRadius.circular(8.0),
+                          child: Image.asset(
+                            exercise.imagePath,
+                            width: 50,
+                            height: 50,
+                            fit: BoxFit.cover,
                           ),
                         ),
-                      ],
-                    ),
-                  if (isFinished)
-                    ElevatedButton.icon(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.check_circle),
-                      label: const Text('Finish'),
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: Colors.green,
-                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                        textStyle: const TextStyle(fontSize: 18),
+                        activeColor: Colors.deepPurple,
+                        controlAffinity: ListTileControlAffinity.leading,
                       ),
-                    ),
-                ],
-              ),
-            ],
+                      if (_selectedExercises[exercise.name] == true)
+                        _buildInputFields(exercise),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.check),
+                label: const Text('Submit'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                onPressed: _saveExercises,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
